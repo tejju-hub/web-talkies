@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Talkie - Walkie Talkie Web App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #111827;
+            color: white;
+        }
+        
+        .speaker-animation {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .channel-indicator {
+            position: relative;
+        }
+        
+        .channel-indicator::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #10B981;
+            border-radius: 50%;
+            top: 50%;
+            right: -15px;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .channel-indicator.active::after {
+            opacity: 1;
+        }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+        
+        .incoming {
+            background-color: #374151;
+            align-self: flex-start;
+            margin-left: 10px;
+        }
+        
+        .outgoing {
+            background-color: #3B82F6;
+            align-self: flex-end;
+            margin-right: 10px;
+        }
+        
+        /* Walkie-talkie push-to-talk button animation */
+        .ptt-button {
+            transition: all 0.1s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .ptt-button:active, .ptt-button.active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            background-color: #EF4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen flex flex-col max-w-md mx-auto">
+        <header class="bg-gray-900 p-4 border-b border-gray-700">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/a91b3b9c-de99-43d1-8298-5a2976a31a47.png" alt="Vintage walkie talkie icon with black and silver colors and antenna" class="rounded-md">
+                    <h1 class="text-xl font-bold">Web Talkie</h1>
+                </div>
+                <div id="connection-status" class="bg-red-500 rounded-full w-3 h-3"></div>
+            </div>
+            
+            <div class="mt-4 flex items-center justify-between">
+                <div class="flex space-x-2">
+                    <div class="channel-indicator" id="channel-1">1</div>
+                    <div class="channel-indicator" id="channel-2">2</div>
+                    <div class="channel-indicator" id="channel-3">3</div>
+                    <div class="channel-indicator" id="channel-4">4</div>
+                </div>
+                
+                <button id="settings-btn" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+        
+        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-gray-800 flex flex-col">
+            <!-- Messages will appear here -->
+            <div class="message-bubble incoming">
+                <div class="text-xs text-gray-300 mb-1">Friend 1 - Channel 1</div>
+                <div>Hey, are you there? Over.</div>
+            </div>
+            <div class="message-bubble incoming">
+                <div class="text-xs text-gray-300 mb-1">Friend 2 - Channel 1</div>
+                <div>Copy that, we're live on channel 1. Over.</div>
+            </div>
+            <div class="message-bubble outgoing">
+                <div class="text-xs text-gray-300 mb-1">You - Channel 1</div>
+                <div>Roger that! Switching to channel 2. Over and out.</div>
+            </div>
+        </div>
+        
+        <div class="p-4 bg-gray-900 border-t border-gray-700">
+            <div class="flex items-center mb-4">
+                <div class="flex-1 bg-gray-800 rounded-full p-2 flex items-center">
+                    <div id="user-mic-indicator" class="w-2 h-2 rounded-full bg-red-500 ml-2 mr-2"></div>
+                    <div id="volume-meter" class="w-full h-2 bg-gray-700 rounded-full mx-2 overflow-hidden">
+                        <div class="h-full bg-green-500 rounded-full w-0" id="volume-level"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-center">
+                <button id="ptt-button" class="ptt-button bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const pttButton = document.getElementById('ptt-button');
+            const channelButtons = [1, 2, 3, 4].map(n => document.getElementById(`channel-${n}`));
+            const chatMessages = document.getElementById('chat-messages');
+            const connectionStatus = document.getElementById('connection-status');
+            const volumeLevel = document.getElementById('volume-level');
+            const userMicIndicator = document.getElementById('user-mic-indicator');
+            
+            // State
+            let currentChannel = 1;
+            let isTransmitting = false;
+            let audioContext;
+            let analyser;
+            let microphone;
+            let isConnected = false;
+            let connectionTimeout;
+            
+            // Simulate connection
+            simulateConnection();
+            
+            // Initialize channels
+            setCurrentChannel(1);
+            
+            // Event Listeners
+            pttButton.addEventListener('mousedown', startTransmission);
+            pttButton.addEventListener('touchstart', startTransmission);
+            pttButton.addEventListener('mouseup', stopTransmission);
+            pttButton.addEventListener('touchend', stopTransmission);
+            pttButton.addEventListener('mouseleave', stopTransmission);
+            
+            channelButtons.forEach((btn, index) => {
+                btn.addEventListener('click', () => setCurrentChannel(index + 1));
+            });
+            
+            // Functions
+            function simulateConnection() {
+                connectionStatus.classList.remove('bg-red-500', 'bg-green-500');
+                connectionStatus.classList.add('bg-yellow-500');
+                connectionStatus.title = 'Connecting...';
+                
+                // Simulate connection delay
+                setTimeout(() => {
+                    isConnected = true;
+                    connectionStatus.classList.remove('bg-yellow-500');
+                    connectionStatus.classList.add('bg-green-500');
+                    connectionStatus.title = 'Connected';
+                }, 2000);
+            }
+            
+            function setCurrentChannel(channel) {
+                currentChannel = channel;
+                document.querySelectorAll('.channel-indicator').forEach(el => el.classList.remove('active'));
+                document.getElementById(`channel-${channel}`).classList.add('active');
+                addSystemMessage(`Switched to channel ${channel}`);
+            }
+            
+            function startTransmission(e) {
+                e.preventDefault();
+                if (!isConnected) {
+                    addSystemMessage("Not connected to server");
+                    return;
+                }
+                
+                if (!isTransmitting) {
+                    isTransmitting = true;
+                    pttButton.classList.add('active');
+                    userMicIndicator.classList.add('bg-green-500');
+                    userMicIndicator.classList.remove('bg-red-500');
+                    
+                    // Initialize audio context if not already done
+                    if (!audioContext) {
+                        try {
+                            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            analyser = audioContext.createAnalyser();
+                            analyser.fftSize = 32;
+                            
+                            navigator.mediaDevices.getUserMedia({ audio: true })
+                                .then(stream => {
+                                    microphone = audioContext.createMediaStreamSource(stream);
+                                    microphone.connect(analyser);
+                                    updateVolumeMeter();
+                                })
+                                .catch(err => {
+                                    console.error('Error accessing microphone:', err);
+                                    addSystemMessage("Microphone access denied");
+                                });
+                        } catch (e) {
+                            console.error('AudioContext not supported', e);
+                            addSystemMessage("Audio not supported in this browser");
+                        }
+                    }
+                    
+                    // Add UI feedback
+                    addSystemMessage("Transmitting...");
+                }
+            }
+            
+            function stopTransmission(e) {
+                if (e) e.preventDefault();
+                
+                if (isTransmitting) {
+                    isTransmitting = false;
+                    pttButton.classList.remove('active');
+                    userMicIndicator.classList.add('bg-red-500');
+                    userMicIndicator.classList.remove('bg-green-500');
+                    
+                    // Add UI feedback
+                    const outgoingMessage = `User message ${Math.floor(Math.random() * 100)}`;
+                    addMessage('You', outgoingMessage, true);
+                    
+                    // Simulate response
+                    if (Math.random() > 0.5) {
+                        setTimeout(() => {
+                            const responses = ["Copy that", "Roger roger", "10-4 good buddy", "Loud and clear", "Over and out"];
+                            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                            addMessage('Friend ' + (Math.floor(Math.random() * 3) + 1), randomResponse, false);
+                        }, 1000);
+                    }
+                }
+            }
+            
+            function updateVolumeMeter() {
+                if (!isTransmitting) {
+                    volumeLevel.style.width = '0%';
+                    return;
+                }
+                
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+                
+                // Map the average to a percentage (0-100)
+                const percentage = Math.min(Math.max(average / 2, 0), 100);
+                volumeLevel.style.width = percentage + '%';
+                
+                // Color based on volume
+                if (percentage > 70) {
+                    volumeLevel.classList.remove('bg-green-500', 'bg-yellow-500');
+                    volumeLevel.classList.add('bg-red-500');
+                } else if (percentage > 30) {
+                    volumeLevel.classList.remove('bg-green-500', 'bg-red-500');
+                    volumeLevel.classList.add('bg-yellow-500');
+                } else {
+                    volumeLevel.classList.remove('bg-yellow-500', 'bg-red-500');
+                    volumeLevel.classList.add('bg-green-500');
+                }
+                
+                requestAnimationFrame(updateVolumeMeter);
+            }
+            
+            function addMessage(sender, message, isOutgoing) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
+                
+                const senderDiv = document.createElement('div');
+                senderDiv.className = 'text-xs text-gray-300 mb-1';
+                senderDiv.textContent = `${sender} - Channel ${currentChannel}`;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.textContent = message;
+                
+                messageDiv.appendChild(senderDiv);
+                messageDiv.appendChild(contentDiv);
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            function addSystemMessage(message) {
+                const systemDiv = document.createElement('div');
+                systemDiv.className = 'text-center text-xs text-gray-400 my-2';
+                systemDiv.textContent = message;
+                chatMessages.appendChild(systemDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Simulate incoming messages
+            setInterval(() => {
+                if (!isTransmitting && Math.random() > 0.9) {
+                    const messages = [
+                        "Anyone there? Over.",
+                        "Party at my place tonight",
+                        "10-20 on that package?",
+                        "Weather looks clear today",
+                        "We have a situation, over",
+                        "Affirmative"
+                    ];
+                    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                    addMessage('Friend ' + (Math.floor(Math.random() * 3) + 1), randomMessage, false);
+                }
+            }, 10000);
+        });
+    </script>
+</body>
+</html>
+
